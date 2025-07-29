@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信二维码长按识别</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .qr-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        
+        .qr-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        .qr-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .qr-image.long-pressing {
+            transform: scale(0.98);
+            filter: brightness(0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .status-text {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+        
+        .status-text.idle {
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .status-text.pressing {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-text.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-text.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+            width: 0%;
+            transition: width 0.1s ease;
+            border-radius: 3px;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: white;
+            transform: scale(1.05);
+        }
+        
+        .feature-list {
+            text-align: left;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back-btn">← 返回首页</a>
+    
+    <div class="container">
+        <header>
+            <h1>📱 微信二维码长按识别</h1>
+            <p class="subtitle">模拟微信长按二维码识别功能</p>
+        </header>
+
+        <div class="qr-container">
+            <h2>自动识别二维码</h2>
+            <div class="instructions">
+                <p>页面将自动识别下方二维码图片，模拟微信识别过程</p>
+            </div>
+            <img src="./3.png" alt="微信二维码" id="qrImage">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            
+            <div id="statusText" class="status-text idle">
+                正在准备自动识别二维码...
+            </div>
+        </div>
+        
+        <div class="comparison-table">
+            <h2>🔧 功能特点</h2>
+            <ul class="feature-list">
+                <li>✅ 长按手势识别（1.5秒触发）</li>
+                <li>✅ 视觉反馈和进度条</li>
+                <li>✅ 二维码内容解析</li>
+                <li>✅ 自动跳转逻辑</li>
+                <li>✅ 移动端触摸支持</li>
+                <li>✅ 防误触设计</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        // 检查jsQR库是否正确加载
+        window.addEventListener('load', function() {
+            console.log('页面加载完成');
+            console.log('jsQR库状态:', typeof jsQR !== 'undefined' ? '✅ 已加载' : '❌ 未加载');
+            if (typeof jsQR === 'undefined') {
+                console.error('jsQR库加载失败，请检查网络连接');
+            }
+        });
+    </script>
+    
+
+    <script>
+        class QRLongPressDetector {
+            constructor() {
+                this.qrImage = document.getElementById('qrImage');
+                this.statusText = document.getElementById('statusText');
+                this.progressFill = document.getElementById('progressFill');
+                
+                this.isPressed = false;
+                this.pressTimer = null;
+                this.progressTimer = null;
+                this.pressStartTime = 0;
+                
+                this.LONG_PRESS_DURATION = 1500; // 1.5秒
+                this.PROGRESS_INTERVAL = 50; // 50ms更新一次进度
+                
+                this.initEventListeners();
+            }
+            
+            initEventListeners() {
+                // 鼠标事件（桌面端）
+                this.qrImage.addEventListener('mousedown', (e) => this.startPress(e));
+                this.qrImage.addEventListener('mouseup', (e) => this.endPress(e));
+                this.qrImage.addEventListener('mouseleave', (e) => this.endPress(e));
+                
+                // 触摸事件（移动端）
+                this.qrImage.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.startPress(e);
+                });
+                this.qrImage.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.endPress(e);
+                });
+                this.qrImage.addEventListener('touchcancel', (e) => {
+                    e.preventDefault();
+                    this.endPress(e);
+                });
+                
+                // 右键菜单禁用
+                this.qrImage.addEventListener('contextmenu', (e) => e.preventDefault());
+            }
+            
+            startPress(event) {
+                if (this.isPressed) return;
+                
+                this.isPressed = true;
+                this.pressStartTime = Date.now();
+                
+                // 添加视觉反馈
+                this.qrImage.classList.add('long-pressing');
+                this.updateStatus('pressing', '正在识别中...');
+                
+                // 开始进度条动画
+                this.startProgressAnimation();
+                
+                // 设置长按定时器
+                this.pressTimer = setTimeout(() => {
+                    this.onLongPressComplete();
+                }, this.LONG_PRESS_DURATION);
+            }
+            
+            endPress(event) {
+                if (!this.isPressed) return;
+                
+                this.isPressed = false;
+                
+                // 清除定时器
+                if (this.pressTimer) {
+                    clearTimeout(this.pressTimer);
+                    this.pressTimer = null;
+                }
+                
+                if (this.progressTimer) {
+                    clearInterval(this.progressTimer);
+                    this.progressTimer = null;
+                }
+                
+                // 移除视觉反馈
+                this.qrImage.classList.remove('long-pressing');
+                this.resetProgress();
+                
+                const pressDuration = Date.now() - this.pressStartTime;
+                if (pressDuration < this.LONG_PRESS_DURATION) {
+                    this.updateStatus('idle', '识别时间不够，请重试...');
+                    setTimeout(() => {
+                        this.updateStatus('idle', '点击图片可手动识别，或等待自动识别...');
+                    }, 2000);
+                }
+            }
+            
+            startProgressAnimation() {
+                this.progressTimer = setInterval(() => {
+                    if (!this.isPressed) return;
+                    
+                    const elapsed = Date.now() - this.pressStartTime;
+                    const progress = Math.min((elapsed / this.LONG_PRESS_DURATION) * 100, 100);
+                    this.progressFill.style.width = progress + '%';
+                }, this.PROGRESS_INTERVAL);
+            }
+            
+            resetProgress() {
+                this.progressFill.style.width = '0%';
+            }
+            
+            onLongPressComplete() {
+                this.isPressed = false;
+                this.qrImage.classList.remove('long-pressing');
+                
+                // 清除定时器
+                if (this.progressTimer) {
+                    clearInterval(this.progressTimer);
+                    this.progressTimer = null;
+                }
+                
+                // 完成进度条
+                this.progressFill.style.width = '100%';
+                
+                this.updateStatus('success', '识别成功！正在解析二维码...');
+                
+                // 模拟二维码识别过程
+                setTimeout(() => {
+                    this.recognizeQRCode();
+                }, 500);
+            }
+            
+            async recognizeQRCode() {
+                try {
+                    console.log('开始二维码识别...');
+                    console.log('jsQR库状态:', typeof jsQR !== 'undefined' ? '已加载' : '未加载');
+                    
+                    // 创建canvas来读取图片数据
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 等待图片加载
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log('图片加载成功, 尺寸:', img.width, 'x', img.height);
+                        
+                        // 如果图片太大，先缩小到合适的尺寸
+                        const maxSize = 600;
+                        let drawWidth = img.width;
+                        let drawHeight = img.height;
+                        
+                        if (img.width > maxSize || img.height > maxSize) {
+                            const ratio = Math.min(maxSize / img.width, maxSize / img.height);
+                            drawWidth = Math.floor(img.width * ratio);
+                            drawHeight = Math.floor(img.height * ratio);
+                            console.log('图片过大，缩放到:', drawWidth, 'x', drawHeight);
+                        }
+                        
+                        canvas.width = drawWidth;
+                        canvas.height = drawHeight;
+                        ctx.drawImage(img, 0, 0, drawWidth, drawHeight);
+                        
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        console.log('图像数据获取成功, 数据长度:', imageData.data.length);
+                        
+                        // 使用jsQR库识别二维码
+                        if (typeof jsQR !== 'undefined') {
+                            console.log('使用jsQR库进行识别...');
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            console.log('识别结果:', code);
+                            
+                            if (code) {
+                                console.log('识别成功! 内容:', code.data);
+                                this.handleQRResult(code.data);
+                            } else {
+                                console.log('jsQR识别失败，尝试其他方法...');
+                                // 尝试调整图像增强识别效果
+                                this.tryEnhancedRecognition(canvas, ctx, imageData);
+                            }
+                        } else {
+                            console.log('jsQR库未加载，使用模拟结果');
+                            this.simulateQRResult();
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error('图片加载失败:', error);
+                        this.simulateQRResult();
+                    };
+                    
+                    console.log('设置图片源:', this.qrImage.src.substring(0, 50) + '...');
+                    img.src = this.qrImage.src;
+                    
+                } catch (error) {
+                    console.error('二维码识别出错:', error);
+                    this.simulateQRResult();
+                }
+            }
+            
+            tryEnhancedRecognition(canvas, ctx, originalImageData) {
+                console.log('尝试图像增强识别...');
+                
+                // 方法1: 增加对比度
+                const enhancedImageData = ctx.createImageData(originalImageData.width, originalImageData.height);
+                for (let i = 0; i < originalImageData.data.length; i += 4) {
+                    const avg = (originalImageData.data[i] + originalImageData.data[i + 1] + originalImageData.data[i + 2]) / 3;
+                    const enhanced = avg > 128 ? 255 : 0; // 二值化
+                    
+                    enhancedImageData.data[i] = enhanced;     // R
+                    enhancedImageData.data[i + 1] = enhanced; // G
+                    enhancedImageData.data[i + 2] = enhanced; // B
+                    enhancedImageData.data[i + 3] = 255;      // A
+                }
+                
+                const code = jsQR(enhancedImageData.data, enhancedImageData.width, enhancedImageData.height);
+                console.log('增强识别结果:', code);
+                
+                if (code) {
+                    console.log('增强识别成功! 内容:', code.data);
+                    this.handleQRResult(code.data);
+                } else {
+                    // 方法2: 尝试不同的缩放
+                    this.tryScaledRecognition(canvas, ctx, originalImageData);
+                }
+            }
+            
+            tryScaledRecognition(canvas, ctx, originalImageData) {
+                console.log('尝试缩放识别...');
+                
+                // 尝试放大图像
+                const scaleFactor = 2;
+                const scaledCanvas = document.createElement('canvas');
+                const scaledCtx = scaledCanvas.getContext('2d');
+                
+                scaledCanvas.width = originalImageData.width * scaleFactor;
+                scaledCanvas.height = originalImageData.height * scaleFactor;
+                
+                // 重新绘制放大的图像
+                ctx.putImageData(originalImageData, 0, 0);
+                scaledCtx.imageSmoothingEnabled = false; // 避免模糊
+                scaledCtx.drawImage(canvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+                
+                const scaledImageData = scaledCtx.getImageData(0, 0, scaledCanvas.width, scaledCanvas.height);
+                const code = jsQR(scaledImageData.data, scaledImageData.width, scaledImageData.height);
+                console.log('缩放识别结果:', code);
+                
+                if (code) {
+                    console.log('缩放识别成功! 内容:', code.data);
+                    this.handleQRResult(code.data);
+                } else {
+                    console.log('所有识别方法都失败了');
+                    this.updateStatus('error', '未能识别二维码内容，请尝试其他图片');
+                }
+            }
+            
+            simulateQRResult() {
+                // 模拟识别结果
+                const mockData = 'https://u.wechat.com/ELAxxxxxxxxxxxx';
+                this.updateStatus('success', '识别成功！发现微信添加好友链接');
+                
+                setTimeout(() => {
+                    this.handleQRResult(mockData);
+                }, 1000);
+            }
+            
+            handleQRResult(qrData) {
+                console.log('二维码内容:', qrData);
+                
+                // 检查是否是微信相关链接
+                if (qrData.includes('wechat.com') || qrData.includes('weixin') || qrData.includes('u.wechat.com')) {
+                    this.updateStatus('success', '检测到微信二维码！正在跳转...');
+                    
+                    setTimeout(() => {
+                        this.redirectToWeChat(qrData);
+                    }, 1500);
+                } else if (qrData.startsWith('http')) {
+                    this.updateStatus('success', '检测到网页链接！正在跳转...');
+                    
+                    setTimeout(() => {
+                        window.open(qrData, '_blank');
+                        this.updateStatus('success', '已在新窗口打开链接');
+                    }, 1500);
+                } else {
+                    this.updateStatus('success', `识别到内容: ${qrData}`);
+                }
+                
+                // 3秒后重置状态
+                setTimeout(() => {
+                    this.resetProgress();
+                    this.updateStatus('idle', '识别完成！点击图片可重新识别...');
+                }, 3000);
+            }
+            
+            redirectToWeChat(qrData) {
+
+                console.log(qrData);
+                // 尝试打开微信
+                const userAgent = navigator.userAgent.toLowerCase();
+                
+                if (userAgent.includes('micromessenger')) {
+                    // 在微信内部，直接跳转
+                    window.location.href = qrData;
+                } else if (userAgent.includes('mobile')) {
+                    // 移动端，尝试使用微信scheme
+                    const wechatScheme = `weixin://dl/business/?t=9XPl7k7i2lC`;
+                    window.location.href = wechatScheme;
+                    
+                    // 如果微信scheme失败，提示用户
+                    setTimeout(() => {
+                        this.updateStatus('error', '请在微信中打开或复制链接到微信');
+                    }, 2000);
+                } else {
+                    // 桌面端，显示提示信息
+                    this.updateStatus('success', '检测到微信二维码！请在手机微信中扫描');
+                    
+                    // 创建提示弹窗
+                    this.showWeChatTip(qrData);
+                }
+            }
+            
+            showWeChatTip(qrData) {
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                `;
+                
+                modal.innerHTML = `
+                    <div style="
+                        background: white;
+                        padding: 30px;
+                        border-radius: 15px;
+                        text-align: center;
+                        max-width: 400px;
+                        margin: 20px;
+                    ">
+                        <h3>🎯 识别成功！</h3>
+                        <p style="margin: 15px 0;">检测到微信添加好友二维码</p>
+                        <p style="color: #666; font-size: 14px;">请使用手机微信扫描此二维码</p>
+                        <button onclick="this.parentElement.parentElement.remove()" style="
+                            margin-top: 20px;
+                            padding: 10px 25px;
+                            background: #1aad19;
+                            color: white;
+                            border: none;
+                            border-radius: 5px;
+                            cursor: pointer;
+                        ">我知道了</button>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // 3秒后自动关闭
+                setTimeout(() => {
+                    if (modal.parentElement) {
+                        modal.remove();
+                    }
+                }, 5000);
+            }
+            
+            updateStatus(type, message) {
+                this.statusText.className = `status-text ${type}`;
+                this.statusText.textContent = message;
+            }
+            
+            // 自动开始识别
+            autoStartRecognition() {
+                this.updateStatus('pressing', '🤖 自动识别中...');
+                
+                // 添加视觉反馈
+                this.qrImage.classList.add('long-pressing');
+                
+                // 开始进度条动画
+                this.isPressed = true;
+                this.pressStartTime = Date.now();
+                this.startProgressAnimation();
+                
+                // 设置自动识别定时器
+                this.pressTimer = setTimeout(() => {
+                    this.onLongPressComplete();
+                }, this.LONG_PRESS_DURATION);
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            const detector = new QRLongPressDetector();
+            
+            // 自动启动识别（延迟1秒让用户看到界面）
+            setTimeout(() => {
+                detector.autoStartRecognition();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 
