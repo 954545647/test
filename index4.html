@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>微信二维码长按识别</title>
-    <link rel="stylesheet" href="style.css">
     <style>
         .qr-container {
             background: white;
@@ -16,9 +15,11 @@
             text-align: center;
         }
         
-        .qr-image {
-            max-width: 100%;
-            height: auto;
+        #qrImage {
+            max-width: 300px;
+            width: 300px;
+            height: 300px;
+            object-fit: contain;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -26,14 +27,16 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            margin: 20px auto;
+            display: block;
         }
         
-        .qr-image:hover {
+        #qrImage:hover {
             transform: scale(1.02);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
-        .qr-image.long-pressing {
+        #qrImage.long-pressing {
             transform: scale(0.98);
             filter: brightness(0.9);
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -689,13 +692,94 @@
             
             // 自动开始识别
             autoStartRecognition() {
-                // 添加随机延迟，模拟真实用户行为
-                const randomDelay = 800 + Math.random() * 1200; // 0.8-2秒随机延迟
+                // 检查是否在微信环境
+                const isWeChatEnv = navigator.userAgent.toLowerCase().includes('micromessenger') ||
+                                  window.__wxjs_environment === 'miniprogram' ||
+                                  window.wx !== undefined;
+                
+                if (isWeChatEnv) {
+                    console.log('微信环境 - 使用自然操作序列');
+                    this.startNaturalRecognitionSequence();
+                } else {
+                    console.log('普通环境 - 使用直接识别');
+                    this.startDirectRecognition();
+                }
+            }
+            
+            // 自然识别序列（微信专用）
+            startNaturalRecognitionSequence() {
+                // 1. 先模拟用户注意到二维码
+                this.updateStatus('idle', '自动识别准备中...');
+                
+                setTimeout(() => {
+                    // 2. 模拟用户将图片滚动到视图中心
+                    this.qrImage.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                    
+                    this.updateStatus('idle', '正在分析图片内容...');
+                }, 1000 + Math.random() * 1000);
+                
+                setTimeout(() => {
+                    // 3. 模拟用户轻微的鼠标移动（表示关注）
+                    const rect = this.qrImage.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    // 模拟鼠标靠近图片
+                    const mouseMove = new MouseEvent('mousemove', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        clientX: centerX + (Math.random() - 0.5) * 50,
+                        clientY: centerY + (Math.random() - 0.5) * 50
+                    });
+                    
+                    document.dispatchEvent(mouseMove);
+                    this.updateStatus('idle', '识别到二维码图片，准备分析...');
+                }, 2500 + Math.random() * 1500);
+                
+                setTimeout(() => {
+                    // 4. 模拟用户"思考"是否要识别
+                    this.updateStatus('idle', '检测到二维码，点击或长按识别...');
+                }, 4000 + Math.random() * 1000);
+                
+                setTimeout(() => {
+                    // 5. 最后开始"用户主动"的识别操作
+                    this.updateStatus('pressing', '🤖 开始智能识别...');
+                    
+                    // 模拟用户逐渐意识到可以长按
+                    setTimeout(() => {
+                        // 重新获取图片位置
+                        const rect = this.qrImage.getBoundingClientRect();
+                        
+                        // 创建一个看起来像用户触发的事件
+                        const naturalEvent = {
+                            type: 'natural_user_action',
+                            target: this.qrImage,
+                            clientX: rect.left + rect.width/2 + (Math.random() - 0.5) * 30,
+                            clientY: rect.top + rect.height/2 + (Math.random() - 0.5) * 30,
+                            timeStamp: Date.now(),
+                            preventDefault: () => {},
+                            stopPropagation: () => {},
+                            // 这个会让微信认为是自然用户行为
+                            isNaturalUserAction: true
+                        };
+                        
+                        this.startPress(naturalEvent);
+                    }, 500 + Math.random() * 800);
+                    
+                }, 6000 + Math.random() * 2000);
+            }
+            
+            // 直接识别（非微信环境）
+            startDirectRecognition() {
+                const randomDelay = 800 + Math.random() * 1200;
                 
                 this.updateStatus('pressing', '🤖 自动识别中...使用多种算法提升识别率');
                 
                 setTimeout(() => {
-                    // 直接调用startPress而不是模拟事件（避免事件冲突）
                     this.startPress({ type: 'auto', target: this.qrImage });
                 }, randomDelay);
             }
@@ -706,6 +790,112 @@
                 this.humanRandomnessTimer = setInterval(() => {
                     this.addHumanRandomness();
                 }, 100 + Math.random() * 200);
+            }
+            
+            // 模拟用户自然探索页面
+            simulateNaturalExploration() {
+                console.log('开始模拟用户自然探索...');
+                
+                const explorationSteps = [
+                    () => this.simulateTextReading(),
+                    () => this.simulateImageHover(),
+                    () => this.simulateScrollExploration(),
+                    () => this.simulateElementFocus()
+                ];
+                
+                explorationSteps.forEach((step, index) => {
+                    setTimeout(step, index * (800 + Math.random() * 600));
+                });
+            }
+            
+            // 模拟阅读文字内容
+            simulateTextReading() {
+                const textElements = document.querySelectorAll('h1, h2, p, .instructions');
+                if (textElements.length > 0) {
+                    const randomElement = textElements[Math.floor(Math.random() * textElements.length)];
+                    randomElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                    
+                    console.log('模拟阅读文字内容');
+                }
+            }
+            
+            // 模拟鼠标悬停在图片上
+            simulateImageHover() {
+                const img = document.getElementById('qrImage');
+                if (img) {
+                    // 模拟鼠标进入和离开
+                    img.dispatchEvent(new MouseEvent('mouseenter', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window
+                    }));
+                    
+                    setTimeout(() => {
+                        img.dispatchEvent(new MouseEvent('mouseleave', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window
+                        }));
+                    }, 500 + Math.random() * 1000);
+                    
+                    console.log('模拟图片悬停');
+                }
+            }
+            
+            // 模拟滚动探索
+            simulateScrollExploration() {
+                const scrollSteps = 3 + Math.floor(Math.random() * 3);
+                let currentStep = 0;
+                
+                const scrollStep = () => {
+                    if (currentStep < scrollSteps) {
+                        const scrollDirection = Math.random() > 0.5 ? 1 : -1;
+                        const scrollAmount = (20 + Math.random() * 80) * scrollDirection;
+                        
+                        window.scrollBy({
+                            top: scrollAmount,
+                            behavior: 'smooth'
+                        });
+                        
+                        currentStep++;
+                        setTimeout(scrollStep, 300 + Math.random() * 500);
+                    } else {
+                        // 最后回到顶部
+                        window.scrollTo({
+                            top: 0,
+                            behavior: 'smooth'
+                        });
+                    }
+                };
+                
+                scrollStep();
+                console.log('模拟滚动探索');
+            }
+            
+            // 模拟元素焦点
+            simulateElementFocus() {
+                const focusableElements = document.querySelectorAll('button, a, input, [tabindex]');
+                if (focusableElements.length > 0) {
+                    const randomElement = focusableElements[Math.floor(Math.random() * focusableElements.length)];
+                    
+                    // 模拟Tab导航
+                    randomElement.dispatchEvent(new FocusEvent('focus', {
+                        bubbles: true,
+                        cancelable: true
+                    }));
+                    
+                    setTimeout(() => {
+                        randomElement.dispatchEvent(new FocusEvent('blur', {
+                            bubbles: true,
+                            cancelable: true
+                        }));
+                    }, 200 + Math.random() * 400);
+                    
+                    console.log('模拟元素焦点');
+                }
             }
             
             // 高级事件模拟（用于手动点击触发）
@@ -861,34 +1051,173 @@
                 // 检查是否在微信环境
                 const userAgent = navigator.userAgent.toLowerCase();
                 const isWeChat = userAgent.includes('micromessenger');
+                const isMiniProgram = window.__wxjs_environment === 'miniprogram' || 
+                                    window.wx !== undefined || 
+                                    userAgent.includes('miniprogram');
                 
-                if (isWeChat) {
-                    // 在微信中添加额外的延迟和随机性
-                    this.LONG_PRESS_DURATION += Math.random() * 300;
-                    this.PROGRESS_INTERVAL += Math.random() * 15;
+                console.log('环境检测:', {
+                    isWeChat,
+                    isMiniProgram,
+                    userAgent: userAgent.substring(0, 50)
+                });
+                
+                if (isWeChat || isMiniProgram) {
+                    // 微信小程序环境需要更严格的反检测
+                    this.setupMiniProgramBehavior();
                     
-                    // 模拟微信特有的行为模式
-                    this.addWeChatBehaviorPattern();
+                    // 大幅增加延迟和随机性
+                    this.LONG_PRESS_DURATION = 1600 + Math.random() * 600; // 1.6-2.2秒
+                    this.PROGRESS_INTERVAL = 60 + Math.random() * 30; // 60-90ms
+                    
+                    return true;
                 }
                 
-                return isWeChat;
+                return false;
             }
             
-            // 添加微信特有的行为模式
-            addWeChatBehaviorPattern() {
-                // 模拟用户在微信中的典型行为
+            // 微信小程序专用行为设置
+            setupMiniProgramBehavior() {
+                console.log('设置微信小程序专用行为...');
+                
+                // 1. 模拟用户真实的页面交互序列
+                this.simulateUserPageInteraction();
+                
+                // 2. 添加页面焦点变化监听
+                this.addFocusBlurSimulation();
+                
+                // 3. 模拟网络延迟和加载时间
+                this.simulateNetworkBehavior();
+                
+                // 4. 添加触摸设备特征
+                this.addTouchDeviceFeatures();
+            }
+            
+            // 模拟用户真实的页面交互序列
+            simulateUserPageInteraction() {
+                // 模拟用户进入页面后的典型行为
+                const interactions = [
+                    () => this.simulatePageScroll(),
+                    () => this.simulatePageVisibility(),
+                    () => this.simulateUserReading(),
+                    () => this.simulateImageLoad()
+                ];
+                
+                interactions.forEach((interaction, index) => {
+                    setTimeout(interaction, (index + 1) * (300 + Math.random() * 500));
+                });
+            }
+            
+            // 模拟页面滚动
+            simulatePageScroll() {
+                const scrollAmount = Math.random() * 100;
+                window.scrollTo({
+                    top: scrollAmount,
+                    behavior: 'smooth'
+                });
+                
                 setTimeout(() => {
-                    // 模拟用户查看页面的行为
                     window.scrollTo({
-                        top: window.scrollY + (Math.random() - 0.5) * 50,
+                        top: 0,
                         behavior: 'smooth'
                     });
+                }, 200 + Math.random() * 300);
+            }
+            
+            // 模拟页面可见性变化
+            simulatePageVisibility() {
+                // 触发页面可见性事件
+                document.dispatchEvent(new Event('visibilitychange'));
+                
+                setTimeout(() => {
+                    // 模拟用户重新关注页面
+                    window.dispatchEvent(new Event('focus'));
+                }, 100 + Math.random() * 200);
+            }
+            
+            // 模拟用户阅读时间
+            simulateUserReading() {
+                // 模拟用户查看页面内容的时间
+                const readingTime = 2000 + Math.random() * 3000; // 2-5秒
+                console.log(`模拟用户阅读时间: ${readingTime.toFixed(0)}ms`);
+                
+                // 在阅读期间随机触发一些微小的交互
+                const readingInterval = setInterval(() => {
+                    if (Math.random() < 0.3) {
+                        // 30% 概率模拟用户微小的滚动
+                        window.scrollBy(0, (Math.random() - 0.5) * 10);
+                    }
                 }, 500 + Math.random() * 1000);
                 
-                // 添加页面focus/blur事件模拟
                 setTimeout(() => {
-                    document.dispatchEvent(new Event('visibilitychange'));
-                }, 200 + Math.random() * 500);
+                    clearInterval(readingInterval);
+                }, readingTime);
+            }
+            
+            // 模拟图片加载
+            simulateImageLoad() {
+                const img = document.getElementById('qrImage');
+                if (img) {
+                    // 模拟图片加载完成事件
+                    img.dispatchEvent(new Event('load'));
+                    
+                    // 模拟用户注意到图片
+                    setTimeout(() => {
+                        img.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                    }, 100 + Math.random() * 300);
+                }
+            }
+            
+            // 添加焦点模糊模拟
+            addFocusBlurSimulation() {
+                let focusCount = 0;
+                const maxFocusEvents = 3 + Math.floor(Math.random() * 3);
+                
+                const focusSimulation = () => {
+                    if (focusCount < maxFocusEvents) {
+                        setTimeout(() => {
+                            window.dispatchEvent(new Event('blur'));
+                            setTimeout(() => {
+                                window.dispatchEvent(new Event('focus'));
+                                focusCount++;
+                                focusSimulation();
+                            }, 200 + Math.random() * 500);
+                        }, 1000 + Math.random() * 2000);
+                    }
+                };
+                
+                focusSimulation();
+            }
+            
+            // 模拟网络行为
+            simulateNetworkBehavior() {
+                // 模拟网络请求延迟
+                const simulatedNetworkDelay = 100 + Math.random() * 300;
+                
+                setTimeout(() => {
+                    // 触发一个假的网络完成事件
+                    window.dispatchEvent(new CustomEvent('networkready', {
+                        detail: { delay: simulatedNetworkDelay }
+                    }));
+                }, simulatedNetworkDelay);
+            }
+            
+            // 添加触摸设备特征
+            addTouchDeviceFeatures() {
+                // 模拟触摸设备的特征
+                if ('ontouchstart' in window) {
+                    // 添加触摸设备特有的事件监听
+                    document.addEventListener('touchstart', () => {}, { passive: true });
+                    document.addEventListener('touchmove', () => {}, { passive: true });
+                    document.addEventListener('touchend', () => {}, { passive: true });
+                }
+                
+                // 模拟设备方向变化
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('orientationchange'));
+                }, 500 + Math.random() * 1000);
             }
             
             // 模拟人类操作的随机性
@@ -910,14 +1239,31 @@
             const detector = new QRLongPressDetector();
             
             // 检查环境并调整行为
-            const isWeChat = detector.checkEnvironment();
+            const isWeChatEnv = detector.checkEnvironment();
             
-            // 自动启动识别（根据环境调整延迟）
-            const baseDelay = isWeChat ? 1500 : 1000; // 微信环境延迟更长
-            const randomDelay = baseDelay + Math.random() * 1000;
+            // 等待用户行为模拟完成后再启动自动识别
+            const userBehaviorDuration = isWeChatEnv ? 8000 : 3000; // 微信环境需要更长时间
+            const randomDelay = userBehaviorDuration + Math.random() * 3000;
+            
+            console.log(`环境: ${isWeChatEnv ? '微信小程序' : '普通浏览器'}, 延迟: ${randomDelay.toFixed(0)}ms`);
+            
+            // 监听网络就绪事件（如果有的话）
+            let networkReady = false;
+            window.addEventListener('networkready', () => {
+                networkReady = true;
+                console.log('网络模拟完成');
+            });
             
             setTimeout(() => {
-                detector.autoStartRecognition();
+                // 确保网络模拟也完成了
+                if (isWeChatEnv && !networkReady) {
+                    console.log('等待网络模拟完成...');
+                    setTimeout(() => {
+                        detector.autoStartRecognition();
+                    }, 1000);
+                } else {
+                    detector.autoStartRecognition();
+                }
             }, randomDelay);
             
             // 添加页面可见性变化监听（增加真实性）
@@ -926,8 +1272,29 @@
                     console.log('页面隐藏，暂停操作');
                 } else {
                     console.log('页面显示，恢复操作');
+                    // 模拟用户重新关注页面
+                    if (isWeChatEnv) {
+                        setTimeout(() => {
+                            window.scrollBy(0, (Math.random() - 0.5) * 20);
+                        }, 100 + Math.random() * 300);
+                    }
                 }
             });
+            
+            // 为微信环境添加额外的用户行为监听
+            if (isWeChatEnv) {
+                // 监听触摸事件以增加真实性
+                let touchCount = 0;
+                document.addEventListener('touchstart', (e) => {
+                    touchCount++;
+                    console.log(`真实触摸事件 #${touchCount}`);
+                }, { passive: true });
+                
+                // 模拟用户对页面的自然探索
+                setTimeout(() => {
+                    detector.simulateNaturalExploration();
+                }, 2000 + Math.random() * 2000);
+            }
         });
     </script>
 </body>
