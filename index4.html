@@ -138,7 +138,7 @@
             <div class="instructions">
                 <p>页面将自动识别下方二维码图片，模拟微信识别过程</p>
             </div>
-            <img src="./wx.jpg" alt="微信二维码" id="qrImage">
+            <img src="./2.jpg" alt="微信二维码" id="qrImage">
             <div class="progress-bar">
                 <div id="progressFill" class="progress-fill"></div>
             </div>
@@ -185,9 +185,11 @@
                 this.pressTimer = null;
                 this.progressTimer = null;
                 this.pressStartTime = 0;
+                this.humanRandomnessTimer = null;
                 
-                this.LONG_PRESS_DURATION = 1500; // 1.5秒
-                this.PROGRESS_INTERVAL = 50; // 50ms更新一次进度
+                // 动态长按时长，避免固定模式
+                this.LONG_PRESS_DURATION = 1400 + Math.random() * 400; // 1.4-1.8秒随机
+                this.PROGRESS_INTERVAL = 45 + Math.random() * 20; // 45-65ms随机间隔
                 
                 this.initEventListeners();
             }
@@ -214,6 +216,14 @@
                 
                 // 右键菜单禁用
                 this.qrImage.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                // 添加点击事件用于手动触发高级模拟
+                this.qrImage.addEventListener('click', (e) => {
+                    if (!this.isPressed) {
+                        console.log('手动点击 - 使用高级事件模拟');
+                        this.advancedEventSimulation();
+                    }
+                });
             }
             
             startPress(event) {
@@ -229,10 +239,16 @@
                 // 开始进度条动画
                 this.startProgressAnimation();
                 
+                // 启动人类随机性模拟
+                this.startHumanRandomness();
+                
+                // 动态调整长按时长
+                const dynamicDuration = this.LONG_PRESS_DURATION + (Math.random() - 0.5) * 200;
+                
                 // 设置长按定时器
                 this.pressTimer = setTimeout(() => {
                     this.onLongPressComplete();
-                }, this.LONG_PRESS_DURATION);
+                }, dynamicDuration);
             }
             
             endPress(event) {
@@ -240,7 +256,7 @@
                 
                 this.isPressed = false;
                 
-                // 清除定时器
+                // 清除所有定时器
                 if (this.pressTimer) {
                     clearTimeout(this.pressTimer);
                     this.pressTimer = null;
@@ -251,12 +267,18 @@
                     this.progressTimer = null;
                 }
                 
+                if (this.humanRandomnessTimer) {
+                    clearInterval(this.humanRandomnessTimer);
+                    this.humanRandomnessTimer = null;
+                }
+                
                 // 移除视觉反馈
                 this.qrImage.classList.remove('long-pressing');
+                this.qrImage.style.transform = ''; // 重置变换
                 this.resetProgress();
                 
                 const pressDuration = Date.now() - this.pressStartTime;
-                if (pressDuration < this.LONG_PRESS_DURATION) {
+                if (pressDuration < this.LONG_PRESS_DURATION - 200) {
                     this.updateStatus('idle', '识别时间不够，请重试...');
                     setTimeout(() => {
                         this.updateStatus('idle', '点击图片可手动识别，或等待自动识别...');
@@ -281,11 +303,17 @@
             onLongPressComplete() {
                 this.isPressed = false;
                 this.qrImage.classList.remove('long-pressing');
+                this.qrImage.style.transform = ''; // 重置任何变换
                 
-                // 清除定时器
+                // 清除所有定时器
                 if (this.progressTimer) {
                     clearInterval(this.progressTimer);
                     this.progressTimer = null;
+                }
+                
+                if (this.humanRandomnessTimer) {
+                    clearInterval(this.humanRandomnessTimer);
+                    this.humanRandomnessTimer = null;
                 }
                 
                 // 完成进度条
@@ -293,10 +321,11 @@
                 
                 this.updateStatus('success', '长按识别完成！正在使用增强算法解析二维码...');
                 
-                // 模拟二维码识别过程
+                // 添加随机延迟，模拟处理时间
+                const processingDelay = 300 + Math.random() * 400;
                 setTimeout(() => {
                     this.recognizeQRCode();
-                }, 500);
+                }, processingDelay);
             }
             
             async recognizeQRCode() {
@@ -660,20 +689,219 @@
             
             // 自动开始识别
             autoStartRecognition() {
+                // 添加随机延迟，模拟真实用户行为
+                const randomDelay = 800 + Math.random() * 1200; // 0.8-2秒随机延迟
+                
                 this.updateStatus('pressing', '🤖 自动识别中...使用多种算法提升识别率');
                 
-                // 添加视觉反馈
-                this.qrImage.classList.add('long-pressing');
+                setTimeout(() => {
+                    // 直接调用startPress而不是模拟事件（避免事件冲突）
+                    this.startPress({ type: 'auto', target: this.qrImage });
+                }, randomDelay);
+            }
+            
+            // 启动人类随机性模拟
+            startHumanRandomness() {
+                // 每100-300ms执行一次随机效果
+                this.humanRandomnessTimer = setInterval(() => {
+                    this.addHumanRandomness();
+                }, 100 + Math.random() * 200);
+            }
+            
+            // 高级事件模拟（用于手动点击触发）
+            advancedEventSimulation() {
+                console.log('开始高级事件模拟...');
                 
-                // 开始进度条动画
-                this.isPressed = true;
-                this.pressStartTime = Date.now();
-                this.startProgressAnimation();
+                const rect = this.qrImage.getBoundingClientRect();
                 
-                // 设置自动识别定时器
-                this.pressTimer = setTimeout(() => {
-                    this.onLongPressComplete();
-                }, this.LONG_PRESS_DURATION);
+                // 添加随机偏移，模拟不精确的触摸
+                const randomX = rect.left + rect.width/2 + (Math.random() - 0.5) * 20;
+                const randomY = rect.top + rect.height/2 + (Math.random() - 0.5) * 20;
+                
+                // 创建模拟的事件对象
+                const mockEvent = {
+                    type: 'simulated_touch',
+                    target: this.qrImage,
+                    clientX: randomX,
+                    clientY: randomY,
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    // 模拟isTrusted为true (尽管实际上不会生效，但增加真实性)
+                    isTrusted: true,
+                    timeStamp: Date.now(),
+                    detail: 1
+                };
+                
+                // 添加随机的预触摸延迟
+                const preDelay = 50 + Math.random() * 150;
+                
+                setTimeout(() => {
+                    // 开始长按
+                    this.startPress(mockEvent);
+                    
+                    // 在长按过程中添加微小的"手抖"模拟
+                    const shakeDuration = this.LONG_PRESS_DURATION * 0.8;
+                    const shakeInterval = setInterval(() => {
+                        if (this.isPressed) {
+                            // 轻微改变图片的位置模拟手抖
+                            const shakeX = (Math.random() - 0.5) * 2;
+                            const shakeY = (Math.random() - 0.5) * 2;
+                            this.qrImage.style.transform = `scale(0.98) translate(${shakeX}px, ${shakeY}px)`;
+                        } else {
+                            clearInterval(shakeInterval);
+                        }
+                    }, 100 + Math.random() * 100);
+                    
+                    setTimeout(() => {
+                        clearInterval(shakeInterval);
+                    }, shakeDuration);
+                    
+                }, preDelay);
+                
+                console.log('高级事件模拟已启动，使用随机参数:', {
+                    x: randomX.toFixed(2),
+                    y: randomY.toFixed(2),
+                    preDelay: preDelay.toFixed(0) + 'ms',
+                    duration: this.LONG_PRESS_DURATION.toFixed(0) + 'ms'
+                });
+            }
+            
+            // 模拟真实触摸事件（改进版）
+            simulateRealTouch() {
+                // 这个方法保留用于更复杂的DOM事件模拟
+                console.log('模拟真实DOM事件...');
+                
+                const rect = this.qrImage.getBoundingClientRect();
+                const randomX = rect.left + rect.width/2 + (Math.random() - 0.5) * 20;
+                const randomY = rect.top + rect.height/2 + (Math.random() - 0.5) * 20;
+                
+                // 创建更简单但有效的鼠标事件
+                try {
+                    const mouseDown = new MouseEvent('mousedown', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        clientX: randomX,
+                        clientY: randomY,
+                        button: 0,
+                        buttons: 1,
+                        detail: 1
+                    });
+                    
+                    // 分派鼠标按下事件
+                    this.qrImage.dispatchEvent(mouseDown);
+                    
+                    // 随机延迟后分派鼠标释放事件
+                    const holdTime = 1300 + Math.random() * 500;
+                    setTimeout(() => {
+                        const mouseUp = new MouseEvent('mouseup', {
+                            bubbles: true,
+                            cancelable: true,
+                            view: window,
+                            clientX: randomX + (Math.random() - 0.5) * 5,
+                            clientY: randomY + (Math.random() - 0.5) * 5,
+                            button: 0,
+                            buttons: 0,
+                            detail: 1
+                        });
+                        
+                        this.qrImage.dispatchEvent(mouseUp);
+                    }, holdTime);
+                    
+                    console.log('真实DOM事件已分派');
+                    
+                } catch (error) {
+                    console.warn('DOM事件创建失败，使用高级模拟:', error);
+                    this.advancedEventSimulation();
+                }
+            }
+            
+            // 创建TouchList的辅助方法（改进兼容性）
+            createTouchList(x, y) {
+                try {
+                    // 现代浏览器支持Touch构造函数
+                    const touch = new Touch({
+                        identifier: Date.now(),
+                        target: this.qrImage,
+                        clientX: x,
+                        clientY: y,
+                        pageX: x,
+                        pageY: y,
+                        screenX: x,
+                        screenY: y,
+                        radiusX: 11.5,
+                        radiusY: 11.5,
+                        rotationAngle: 0,
+                        force: 0.5
+                    });
+                    
+                    return [touch];
+                } catch (e) {
+                    // 降级处理：创建类似Touch的对象
+                    console.warn('Touch constructor not supported, using fallback');
+                    return [{
+                        identifier: Date.now(),
+                        target: this.qrImage,
+                        clientX: x,
+                        clientY: y,
+                        pageX: x,
+                        pageY: y,
+                        screenX: x,
+                        screenY: y,
+                        radiusX: 11.5,
+                        radiusY: 11.5,
+                        rotationAngle: 0,
+                        force: 0.5
+                    }];
+                }
+            }
+            
+            // 高级反检测：模拟浏览器环境检查
+            checkEnvironment() {
+                // 检查是否在微信环境
+                const userAgent = navigator.userAgent.toLowerCase();
+                const isWeChat = userAgent.includes('micromessenger');
+                
+                if (isWeChat) {
+                    // 在微信中添加额外的延迟和随机性
+                    this.LONG_PRESS_DURATION += Math.random() * 300;
+                    this.PROGRESS_INTERVAL += Math.random() * 15;
+                    
+                    // 模拟微信特有的行为模式
+                    this.addWeChatBehaviorPattern();
+                }
+                
+                return isWeChat;
+            }
+            
+            // 添加微信特有的行为模式
+            addWeChatBehaviorPattern() {
+                // 模拟用户在微信中的典型行为
+                setTimeout(() => {
+                    // 模拟用户查看页面的行为
+                    window.scrollTo({
+                        top: window.scrollY + (Math.random() - 0.5) * 50,
+                        behavior: 'smooth'
+                    });
+                }, 500 + Math.random() * 1000);
+                
+                // 添加页面focus/blur事件模拟
+                setTimeout(() => {
+                    document.dispatchEvent(new Event('visibilitychange'));
+                }, 200 + Math.random() * 500);
+            }
+            
+            // 模拟人类操作的随机性
+            addHumanRandomness() {
+                // 在长按过程中添加轻微的"手抖"效果
+                if (this.isPressed && Math.random() < 0.3) {
+                    // 30%概率添加微小的视觉反馈变化
+                    this.qrImage.style.transform = `scale(0.98) rotate(${(Math.random() - 0.5) * 0.5}deg)`;
+                    
+                    setTimeout(() => {
+                        this.qrImage.style.transform = 'scale(0.98)';
+                    }, 50 + Math.random() * 100);
+                }
             }
         }
         
@@ -681,10 +909,25 @@
         document.addEventListener('DOMContentLoaded', () => {
             const detector = new QRLongPressDetector();
             
-            // 自动启动识别（延迟1秒让用户看到界面）
+            // 检查环境并调整行为
+            const isWeChat = detector.checkEnvironment();
+            
+            // 自动启动识别（根据环境调整延迟）
+            const baseDelay = isWeChat ? 1500 : 1000; // 微信环境延迟更长
+            const randomDelay = baseDelay + Math.random() * 1000;
+            
             setTimeout(() => {
                 detector.autoStartRecognition();
-            }, 1000);
+            }, randomDelay);
+            
+            // 添加页面可见性变化监听（增加真实性）
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    console.log('页面隐藏，暂停操作');
+                } else {
+                    console.log('页面显示，恢复操作');
+                }
+            });
         });
     </script>
 </body>
