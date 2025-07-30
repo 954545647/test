@@ -118,6 +118,7 @@
             <div style="color: #0c4a6e;">手机号：<span id="currentPhone"></span></div>
             <div style="color: #0c4a6e;">用户ID：<span id="currentUserId"></span></div>
             <div style="color: #0c4a6e;">企业ID：<span id="currentCorpId"></span></div>
+            <div style="color: #0c4a6e;">员工链接ID：<span id="currentCaId"></span></div>
         </div>
 
         <button class="btn" onclick="addFriend()">
@@ -141,10 +142,10 @@
             <div style="font-weight: bold; margin-bottom: 8px;">💡 URL参数使用说明：</div>
             <div style="margin-bottom: 5px;">通过URL参数动态设置用户信息：</div>
             <div style="font-family: monospace; background: #e2e8f0; padding: 8px; border-radius: 4px; word-break: break-all;">
-                ?phone=手机号&userId=用户ID&corpId=企业ID
+                ?phone=手机号&userId=用户ID&corpId=企业ID&caId=员工链接ID
             </div>
             <div style="margin-top: 8px; font-size: 11px;">
-                示例：?phone=13012345678&userId=testuser&corpId=ww123456789
+                示例：?phone=13012345678&userId=testuser&corpId=ww123456789&caId=employeeId123
             </div>
         </div>
     </div>
@@ -156,7 +157,8 @@
             return {
                 phone: params.get('phone'),
                 userId: params.get('userId') || params.get('userid'),
-                corpId: params.get('corpId') || params.get('corpid')
+                corpId: params.get('corpId') || params.get('corpid'),
+                caId: params.get('caId') || params.get('caid')
             };
         }
 
@@ -167,7 +169,9 @@
         const userInfo = {
             phone: urlParams.phone || '13057098289',
             userId: urlParams.userId || 've8bcfaceb3b',
-            corpId: urlParams.corpId || 'wwc7d625edff861d2c'
+            corpId: urlParams.corpId || 'wwc7d625edff861d2c',
+            // 企业微信员工链接ID（ca后面的部分）
+            caId: urlParams.caId || 'defaultEmployeeId'
         };
 
         // 环境检测
@@ -194,15 +198,18 @@
 
             // 尝试多种跳转方案
             const schemes = [
-                // 方案1: 通过手机号添加
+                // 方案1: 企业微信标准员工添加链接格式（推荐）
+                `weixin://biz/ww/profile/https://work.weixin.qq.com/ca/${userInfo.caId}`,
+                
+                // 方案2: 通过手机号添加
                 `wxwork://contact/add?phone=${userInfo.phone}`,
                 `https://work.weixin.qq.com/contact/add?phone=${userInfo.phone}`,
                 
-                // 方案2: 通过用户ID添加（如果ve8bcfaceb3b是用户ID）
+                // 方案3: 通过用户ID添加
                 `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
                 `https://work.weixin.qq.com/contact/profile?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
                 
-                // 方案3: 备用方案
+                // 方案4: 备用方案
                 `wxwork://profile/?userid=${userInfo.userId}`,
                 `wxwork://addcontact?phone=${userInfo.phone}`
             ];
@@ -288,11 +295,13 @@
             document.getElementById('currentPhone').textContent = userInfo.phone;
             document.getElementById('currentUserId').textContent = userInfo.userId;
             document.getElementById('currentCorpId').textContent = userInfo.corpId;
+            document.getElementById('currentCaId').textContent = userInfo.caId;
         }
 
         // 显示所有跳转链接
         function showJumpLinks() {
             const schemes = [
+                `weixin://biz/ww/profile/https://work.weixin.qq.com/ca/${userInfo.caId}`,
                 `wxwork://contact/add?phone=${userInfo.phone}`,
                 `https://work.weixin.qq.com/contact/add?phone=${userInfo.phone}`,
                 `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
@@ -307,6 +316,7 @@
             let html = '';
             schemes.forEach((scheme, index) => {
                 const description = [
+                    '⭐ 企业微信标准员工添加链接（推荐）',
                     '📱 企业微信内通过手机号添加',
                     '🌐 Web版通过手机号添加',
                     '💬 企业微信内通过用户ID发消息',
