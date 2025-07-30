@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加微信好友</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #07c160 0%, #00d4aa 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #07c160;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #6c757d;
+        }
+
+        .info-value {
+            color: #495057;
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .add-friend-btn {
+            width: 100%;
+            padding: 16px 20px;
+            background: linear-gradient(45deg, #07c160, #06ad56);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(7, 193, 96, 0.3);
+        }
+
+        .add-friend-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(7, 193, 96, 0.4);
+        }
+
+        .add-friend-btn:active {
+            transform: translateY(0);
+        }
+
+        .fallback-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #856404;
+            margin-top: 20px;
+        }
+
+        .status {
+            margin: 15px 0;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 20px 10px;
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .add-friend-btn {
+                font-size: 16px;
+                padding: 14px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 添加微信好友</h1>
+            <p>点击按钮直接添加</p>
+        </div>
+
+        <div class="user-info">
+            <div class="info-item">
+                <span class="info-label">微信号:</span>
+                <span class="info-value">xhj__1119</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">手机号:</span>
+                <span class="info-value">13250504940</span>
+            </div>
+        </div>
+
+        <button class="add-friend-btn" onclick="addWeChatFriend()">
+            ➕ 添加为微信好友
+        </button>
+
+        <div id="statusDisplay" class="status"></div>
+
+        <div class="fallback-info">
+            <strong>💡 使用说明：</strong><br>
+            点击按钮将尝试直接跳转到微信添加好友页面。如果无法跳转，请手动打开微信搜索：<strong>xhj__1119</strong> 或 <strong>13250504940</strong>
+        </div>
+    </div>
+
+    <script>
+        // 用户数据
+        const USER_DATA = {
+            wechatId: 'xhj__1119',
+            phone: '13250504940'
+        };
+
+        // 显示状态信息
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusDisplay');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 4000);
+        }
+
+        // 添加微信好友
+        function addWeChatFriend() {
+            showStatus('正在尝试跳转到微信...', 'info');
+
+            // 尝试多种微信协议跳转方式
+            const schemes = [
+                // 直接搜索微信号
+                `weixin://contacts/search/${USER_DATA.wechatId}`,
+                // 通用添加好友页面
+                'weixin://contacts/add',
+                // 备用协议
+                'weixin://add',
+                // 最基本的微信协议
+                'weixin://'
+            ];
+
+            let currentScheme = 0;
+
+            function tryNextScheme() {
+                if (currentScheme >= schemes.length) {
+                    // 所有协议都尝试失败，显示手动添加指导
+                    showFallbackGuide();
+                    return;
+                }
+
+                try {
+                    const scheme = schemes[currentScheme];
+                    console.log(`尝试协议 ${currentScheme + 1}: ${scheme}`);
+                    
+                    // 创建隐藏的iframe来尝试协议跳转
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = scheme;
+                    document.body.appendChild(iframe);
+                    
+                    // 2秒后移除iframe并尝试下一个协议
+                    setTimeout(() => {
+                        document.body.removeChild(iframe);
+                        currentScheme++;
+                        tryNextScheme();
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error(`协议 ${schemes[currentScheme]} 失败:`, error);
+                    currentScheme++;
+                    tryNextScheme();
+                }
+            }
+
+            // 开始尝试协议跳转
+            tryNextScheme();
+
+            // 同时尝试直接location跳转（作为备用）
+            setTimeout(() => {
+                try {
+                    window.location.href = `weixin://contacts/search/${USER_DATA.wechatId}`;
+                } catch (error) {
+                    console.error('直接跳转失败:', error);
+                }
+            }, 500);
+        }
+
+        // 显示手动添加指导
+        function showFallbackGuide() {
+            showStatus('跳转失败，请手动添加', 'error');
+            
+            // 创建模态框显示详细指导
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                justify-content: center; z-index: 10000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; 
+                           max-width: 400px; margin: 20px;">
+                    <h3 style="color: #07c160; margin-bottom: 20px;">📱 手动添加好友</h3>
+                    <div style="text-align: left; margin: 20px 0; line-height: 1.6;">
+                        <p style="margin-bottom: 15px;"><strong>请按以下步骤操作：</strong></p>
+                        <ol>
+                            <li>打开微信</li>
+                            <li>点击右上角的"+"</li>
+                            <li>选择"添加朋友"</li>
+                            <li>输入微信号：<strong style="color: #07c160;">${USER_DATA.wechatId}</strong></li>
+                            <li>或输入手机号：<strong style="color: #07c160;">${USER_DATA.phone}</strong></li>
+                        </ol>
+                    </div>
+                    <button onclick="copyToClipboard(); this.parentElement.parentElement.remove();" style="
+                        margin: 10px 5px; padding: 12px 20px; background: #07c160;
+                        color: white; border: none; border-radius: 8px; cursor: pointer;
+                        font-weight: bold;
+                    ">复制微信号</button>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        margin: 10px 5px; padding: 12px 20px; background: #6c757d;
+                        color: white; border: none; border-radius: 8px; cursor: pointer;
+                        font-weight: bold;
+                    ">我知道了</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        // 复制微信号到剪贴板
+        function copyToClipboard() {
+            const text = USER_DATA.wechatId;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showStatus(`微信号已复制：${text}`, 'success');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        // 降级复制方法
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showStatus(`微信号已复制：${text}`, 'success');
+            } catch (err) {
+                showStatus('复制失败，请手动输入微信号', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('微信添加好友页面已加载');
+            console.log('用户数据:', USER_DATA);
+            
+            // 检测环境
+            const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            
+            if (isWeChat) {
+                showStatus('当前在微信中，点击按钮即可添加', 'success');
+            } else if (isMobile) {
+                showStatus('点击按钮尝试跳转到微信', 'info');
+            } else {
+                showStatus('建议在手机上打开此页面', 'info');
+            }
+        });
+    </script>
+</body>
+</html> 
