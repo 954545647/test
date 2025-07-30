@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业微信链接测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .input-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .test-section {
+            margin-top: 30px;
+        }
+
+        .test-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .test-item h3 {
+            color: #1f2937;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .test-link {
+            font-family: monospace;
+            background: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            word-break: break-all;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #3b82f6, #1e40af);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn.test {
+            background: linear-gradient(45deg, #10b981, #047857);
+        }
+
+        .btn.copy {
+            background: linear-gradient(45deg, #6366f1, #4338ca);
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 企业微信链接测试工具</h1>
+        
+        <div class="input-section">
+            <h2 style="margin-bottom: 20px; color: #374151;">📝 输入员工信息</h2>
+            
+            <div class="input-group">
+                <label for="caId">员工链接ID (ca/)：</label>
+                <input type="text" id="caId" placeholder="例如：17391631420" value="17391631420">
+            </div>
+            
+            <div class="input-group">
+                <label for="phone">手机号：</label>
+                <input type="text" id="phone" placeholder="例如：13012345678" value="13057098289">
+            </div>
+            
+            <div class="input-group">
+                <label for="userId">用户ID：</label>
+                <input type="text" id="userId" placeholder="例如：ve8bcfaceb3b" value="ve8bcfaceb3b">
+            </div>
+            
+            <div class="input-group">
+                <label for="corpId">企业ID：</label>
+                <input type="text" id="corpId" placeholder="例如：wwc7d625edff861d2c" value="wwc7d625edff861d2c">
+            </div>
+            
+            <button class="btn" onclick="generateLinks()" style="margin-top: 15px; padding: 12px 24px; font-size: 14px;">
+                🔗 生成测试链接
+            </button>
+        </div>
+
+        <div id="testSection" class="test-section" style="display: none;">
+            <h2 style="margin-bottom: 20px; color: #374151;">🧪 测试链接</h2>
+            <div id="testLinks"></div>
+        </div>
+
+        <div id="statusDisplay" class="status"></div>
+    </div>
+
+    <script>
+        // 显示状态
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusDisplay');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message.replace(/\n/g, '<br>');
+            statusDiv.style.display = 'block';
+            
+            if (type !== 'info') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // 生成测试链接
+        function generateLinks() {
+            const caId = document.getElementById('caId').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const userId = document.getElementById('userId').value.trim();
+            const corpId = document.getElementById('corpId').value.trim();
+
+            if (!caId) {
+                showStatus('请输入员工链接ID', 'error');
+                return;
+            }
+
+            const testLinks = [
+                {
+                    name: '⭐ 标准企业微信员工链接',
+                    url: `weixin://biz/ww/profile/https://work.weixin.qq.com/ca/${caId}`,
+                    description: '推荐格式，适用于大多数情况'
+                },
+                {
+                    name: '🌐 直接访问ca链接',
+                    url: `https://work.weixin.qq.com/ca/${caId}`,
+                    description: '在浏览器中直接打开'
+                },
+                {
+                    name: '🔗 企业微信协议ca链接',
+                    url: `weixin://biz/ww/profile/https://work.weixin.qq.com/contact/profile?ca=${caId}`,
+                    description: '备用协议格式'
+                },
+                {
+                    name: '📱 企业微信开放平台格式',
+                    url: `https://wwopen.work.weixin.qq.com/wwopenmng/index#/profile?ca=${caId}`,
+                    description: '开放平台链接格式'
+                }
+            ];
+
+            if (phone) {
+                testLinks.push({
+                    name: '📞 通过手机号添加 (App内)',
+                    url: `wxwork://contact/add?phone=${phone}`,
+                    description: '需要在企业微信App内打开'
+                });
+                testLinks.push({
+                    name: '📞 通过手机号添加 (Web)',
+                    url: `https://work.weixin.qq.com/contact/add?phone=${phone}`,
+                    description: 'Web版本'
+                });
+            }
+
+            if (userId && corpId) {
+                testLinks.push({
+                    name: '👤 用户档案 (App内)',
+                    url: `wxwork://profile/?userid=${userId}`,
+                    description: '企业微信内用户档案'
+                });
+                testLinks.push({
+                    name: '💬 发送消息',
+                    url: `wxwork://message/?userid=${userId}&corpid=${corpId}`,
+                    description: '直接发送消息'
+                });
+            }
+
+            displayTestLinks(testLinks);
+        }
+
+        // 显示测试链接
+        function displayTestLinks(links) {
+            const testSection = document.getElementById('testSection');
+            const testLinksDiv = document.getElementById('testLinks');
+            
+            let html = '';
+            links.forEach((link, index) => {
+                html += `
+                    <div class="test-item">
+                        <h3>${link.name}</h3>
+                        <p style="color: #6b7280; font-size: 13px; margin-bottom: 10px;">${link.description}</p>
+                        <div class="test-link">${link.url}</div>
+                        <button class="btn test" onclick="testLink('${link.url.replace(/'/g, "\\'")}', this)">
+                            🧪 测试跳转
+                        </button>
+                        <button class="btn copy" onclick="copyLink('${link.url.replace(/'/g, "\\'")}', this)">
+                            📋 复制链接
+                        </button>
+                    </div>
+                `;
+            });
+            
+            testLinksDiv.innerHTML = html;
+            testSection.style.display = 'block';
+            
+            showStatus('已生成测试链接，点击"测试跳转"按钮进行测试', 'success');
+        }
+
+        // 测试链接
+        function testLink(url, button) {
+            const originalText = button.textContent;
+            button.textContent = '⏳ 跳转中...';
+            button.style.background = 'linear-gradient(45deg, #f59e0b, #d97706)';
+            
+            try {
+                window.open(url, '_blank');
+                
+                setTimeout(() => {
+                    button.textContent = '✅ 已跳转';
+                    button.style.background = 'linear-gradient(45deg, #10b981, #047857)';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = 'linear-gradient(45deg, #10b981, #047857)';
+                    }, 2000);
+                }, 500);
+                
+                showStatus(`已尝试打开: ${url}`, 'info');
+                
+            } catch (error) {
+                button.textContent = '❌ 失败';
+                button.style.background = 'linear-gradient(45deg, #ef4444, #dc2626)';
+                showStatus('跳转失败: ' + error.message, 'error');
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(45deg, #10b981, #047857)';
+                }, 2000);
+            }
+        }
+
+        // 复制链接
+        function copyLink(url, button) {
+            const originalText = button.textContent;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(url).then(() => {
+                    button.textContent = '✅ 已复制';
+                    button.style.background = 'linear-gradient(45deg, #10b981, #047857)';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = 'linear-gradient(45deg, #6366f1, #4338ca)';
+                    }, 2000);
+                }).catch(() => {
+                    showStatus('复制失败，请手动复制', 'error');
+                });
+            } else {
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = url;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    button.textContent = '✅ 已复制';
+                    button.style.background = 'linear-gradient(45deg, #10b981, #047857)';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = 'linear-gradient(45deg, #6366f1, #4338ca)';
+                    }, 2000);
+                } catch (err) {
+                    showStatus('复制失败，请手动复制', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 从URL参数获取值
+            const params = new URLSearchParams(window.location.search);
+            const caId = params.get('caId') || params.get('catId') || '17391631420';
+            const phone = params.get('phone') || '13057098289';
+            const userId = params.get('userId') || 've8bcfaceb3b';
+            const corpId = params.get('corpId') || 'wwc7d625edff861d2c';
+
+            document.getElementById('caId').value = caId;
+            document.getElementById('phone').value = phone;
+            document.getElementById('userId').value = userId;
+            document.getElementById('corpId').value = corpId;
+
+            // 如果有参数，自动生成链接
+            if (params.get('caId') || params.get('catId')) {
+                generateLinks();
+            }
+        });
+    </script>
+</body>
+</html> 

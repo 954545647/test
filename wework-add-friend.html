@@ -129,6 +129,10 @@
             🔗 查看跳转链接
         </button>
 
+        <button class="btn" onclick="showDebugInfo()" style="background: linear-gradient(45deg, #ff9800, #f57c00); margin-top: 15px;">
+            🔧 调试信息
+        </button>
+
         <div id="jumpLinksDisplay" style="display: none; margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 12px; text-align: left;">
             <div style="font-weight: bold; color: #374151; margin-bottom: 10px;">🔗 所有跳转链接：</div>
             <div id="linksList"></div>
@@ -158,7 +162,7 @@
                 phone: params.get('phone'),
                 userId: params.get('userId') || params.get('userid'),
                 corpId: params.get('corpId') || params.get('corpid'),
-                caId: params.get('caId') || params.get('caid')
+                caId: params.get('caId') || params.get('caid') || params.get('catId')
             };
         }
 
@@ -201,13 +205,20 @@
                 // 方案1: 企业微信标准员工添加链接格式（推荐）
                 `weixin://biz/ww/profile/https://work.weixin.qq.com/ca/${userInfo.caId}`,
                 
+                // 方案1.1: 尝试不同的ca链接格式
+                `https://work.weixin.qq.com/ca/${userInfo.caId}`,
+                `weixin://biz/ww/profile/https://work.weixin.qq.com/contact/profile?ca=${userInfo.caId}`,
+                
+                // 方案1.2: 尝试wwopen格式
+                `https://wwopen.work.weixin.qq.com/wwopenmng/index#/profile?ca=${userInfo.caId}`,
+                
                 // 方案2: 通过手机号添加
-                `wxwork://contact/add?phone=${userInfo.phone}`,
                 `https://work.weixin.qq.com/contact/add?phone=${userInfo.phone}`,
+                `wxwork://contact/add?phone=${userInfo.phone}`,
                 
                 // 方案3: 通过用户ID添加
-                `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
                 `https://work.weixin.qq.com/contact/profile?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
+                `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
                 
                 // 方案4: 备用方案
                 `wxwork://profile/?userid=${userInfo.userId}`,
@@ -302,6 +313,9 @@
         function showJumpLinks() {
             const schemes = [
                 `weixin://biz/ww/profile/https://work.weixin.qq.com/ca/${userInfo.caId}`,
+                `https://work.weixin.qq.com/ca/${userInfo.caId}`,
+                `weixin://biz/ww/profile/https://work.weixin.qq.com/contact/profile?ca=${userInfo.caId}`,
+                `https://wwopen.work.weixin.qq.com/wwopenmng/index#/profile?ca=${userInfo.caId}`,
                 `wxwork://contact/add?phone=${userInfo.phone}`,
                 `https://work.weixin.qq.com/contact/add?phone=${userInfo.phone}`,
                 `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
@@ -317,6 +331,9 @@
             schemes.forEach((scheme, index) => {
                 const description = [
                     '⭐ 企业微信标准员工添加链接（推荐）',
+                    '🌐 直接访问ca链接',
+                    '🔗 企业微信协议ca链接',
+                    '📱 企业微信开放平台格式',
                     '📱 企业微信内通过手机号添加',
                     '🌐 Web版通过手机号添加',
                     '💬 企业微信内通过用户ID发消息',
@@ -331,9 +348,14 @@
                         <div style="font-family: monospace; color: #4b5563; word-break: break-all; font-size: 11px; background: #f9fafb; padding: 8px; border-radius: 4px;">
                             ${scheme}
                         </div>
-                        <button onclick="copyToClipboard('${scheme.replace(/'/g, "\\'")}', this)" style="margin-top: 5px; padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">
-                            复制链接
-                        </button>
+                        <div style="margin-top: 8px;">
+                            <button onclick="copyToClipboard('${scheme.replace(/'/g, "\\'")}', this)" style="margin-right: 5px; padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                                复制链接
+                            </button>
+                            <button onclick="testSingleLink('${scheme.replace(/'/g, "\\'")}', this)" style="padding: 4px 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                                测试跳转
+                            </button>
+                        </div>
                     </div>
                 `;
             });
@@ -376,6 +398,67 @@
                 }
                 document.body.removeChild(textArea);
             }
+        }
+
+        // 测试单个链接
+        function testSingleLink(scheme, button) {
+            console.log(`测试链接: ${scheme}`);
+            const originalText = button.textContent;
+            const originalBg = button.style.background;
+            
+            button.textContent = '跳转中...';
+            button.style.background = '#f59e0b';
+            
+            showStatus(`正在测试: ${scheme}`, 'info');
+            
+            try {
+                if (openWithScheme(scheme)) {
+                    button.textContent = '跳转成功';
+                    button.style.background = '#10b981';
+                    showStatus('跳转测试完成！', 'success');
+                } else {
+                    button.textContent = '跳转失败';
+                    button.style.background = '#ef4444';
+                    showStatus('跳转测试失败', 'error');
+                }
+            } catch (error) {
+                console.error('测试链接失败:', error);
+                button.textContent = '测试失败';
+                button.style.background = '#ef4444';
+                showStatus('测试时发生错误', 'error');
+            }
+            
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = originalBg;
+            }, 3000);
+        }
+
+        // 添加调试信息按钮
+        function showDebugInfo() {
+            const debugInfo = `
+🔧 调试信息：
+• 用户代理: ${navigator.userAgent}
+• 是否企业微信: ${isWeWork}
+• 是否微信: ${isWeChat}
+• 是否移动端: ${isMobile}
+• 当前员工ID: ${userInfo.caId}
+• 完整用户信息: ${JSON.stringify(userInfo, null, 2)}
+
+📋 可能的问题：
+1. 员工ID (${userInfo.caId}) 可能不正确
+2. 员工可能未开启客户联系功能
+3. 企业可能未配置客户联系权限
+4. 链接格式可能需要调整
+
+💡 建议：
+• 确认企业微信后台已生成正确的员工链接
+• 检查员工是否有客户联系权限
+• 尝试在企业微信内打开链接
+            `;
+            
+            showStatus(debugInfo, 'info');
+            console.log('调试信息:', debugInfo);
         }
 
         // 页面加载完成后的初始化
