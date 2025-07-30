@@ -113,21 +113,61 @@
             <p>点击下方按钮添加为企业微信好友</p>
         </div>
 
+        <div id="userInfo" style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 15px; margin: 20px 0; font-size: 12px; text-align: left;">
+            <div style="font-weight: bold; color: #0369a1; margin-bottom: 8px;">当前用户信息：</div>
+            <div style="color: #0c4a6e;">手机号：<span id="currentPhone"></span></div>
+            <div style="color: #0c4a6e;">用户ID：<span id="currentUserId"></span></div>
+            <div style="color: #0c4a6e;">企业ID：<span id="currentCorpId"></span></div>
+        </div>
+
         <button class="btn" onclick="addFriend()">
             👥 添加好友
         </button>
 
+        <button class="btn" onclick="showJumpLinks()" style="background: linear-gradient(45deg, #34a853, #2e7d32); margin-top: 15px;">
+            🔗 查看跳转链接
+        </button>
+
+        <div id="jumpLinksDisplay" style="display: none; margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 12px; text-align: left;">
+            <div style="font-weight: bold; color: #374151; margin-bottom: 10px;">🔗 所有跳转链接：</div>
+            <div id="linksList"></div>
+        </div>
+
         <div id="statusDisplay" class="status">
             正在尝试跳转...
+        </div>
+
+        <div style="margin-top: 25px; padding: 15px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #64748b; text-align: left;">
+            <div style="font-weight: bold; margin-bottom: 8px;">💡 URL参数使用说明：</div>
+            <div style="margin-bottom: 5px;">通过URL参数动态设置用户信息：</div>
+            <div style="font-family: monospace; background: #e2e8f0; padding: 8px; border-radius: 4px; word-break: break-all;">
+                ?phone=手机号&userId=用户ID&corpId=企业ID
+            </div>
+            <div style="margin-top: 8px; font-size: 11px;">
+                示例：?phone=13012345678&userId=testuser&corpId=ww123456789
+            </div>
         </div>
     </div>
 
     <script>
-        // 用户信息
+        // 解析URL参数
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                phone: params.get('phone'),
+                userId: params.get('userId') || params.get('userid'),
+                corpId: params.get('corpId') || params.get('corpid')
+            };
+        }
+
+        // 获取URL参数
+        const urlParams = getUrlParams();
+
+        // 用户信息（支持URL参数覆盖）
         const userInfo = {
-            phone: '13057098289',
-            userId: 've8bcfaceb3b',
-            corpId: 've8bcfaceb3b' // 尝试作为企业ID使用
+            phone: urlParams.phone || '13057098289',
+            userId: urlParams.userId || 've8bcfaceb3b',
+            corpId: urlParams.corpId || 'wwc7d625edff861d2c'
         };
 
         // 环境检测
@@ -243,10 +283,103 @@
             }, 3000);
         }
 
+        // 更新页面显示的用户信息
+        function updateUserInfoDisplay() {
+            document.getElementById('currentPhone').textContent = userInfo.phone;
+            document.getElementById('currentUserId').textContent = userInfo.userId;
+            document.getElementById('currentCorpId').textContent = userInfo.corpId;
+        }
+
+        // 显示所有跳转链接
+        function showJumpLinks() {
+            const schemes = [
+                `wxwork://contact/add?phone=${userInfo.phone}`,
+                `https://work.weixin.qq.com/contact/add?phone=${userInfo.phone}`,
+                `wxwork://message/?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
+                `https://work.weixin.qq.com/contact/profile?userid=${userInfo.userId}&corpid=${userInfo.corpId}`,
+                `wxwork://profile/?userid=${userInfo.userId}`,
+                `wxwork://addcontact?phone=${userInfo.phone}`
+            ];
+
+            const linksList = document.getElementById('linksList');
+            const jumpLinksDisplay = document.getElementById('jumpLinksDisplay');
+            
+            let html = '';
+            schemes.forEach((scheme, index) => {
+                const description = [
+                    '📱 企业微信内通过手机号添加',
+                    '🌐 Web版通过手机号添加',
+                    '💬 企业微信内通过用户ID发消息',
+                    '🌐 Web版用户档案页面',
+                    '👤 企业微信内用户档案',
+                    '📞 企业微信内添加联系人'
+                ][index];
+                
+                html += `
+                    <div style="margin-bottom: 15px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+                        <div style="font-weight: bold; color: #1f2937; margin-bottom: 5px;">${description}</div>
+                        <div style="font-family: monospace; color: #4b5563; word-break: break-all; font-size: 11px; background: #f9fafb; padding: 8px; border-radius: 4px;">
+                            ${scheme}
+                        </div>
+                        <button onclick="copyToClipboard('${scheme.replace(/'/g, "\\'")}', this)" style="margin-top: 5px; padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                            复制链接
+                        </button>
+                    </div>
+                `;
+            });
+            
+            linksList.innerHTML = html;
+            jumpLinksDisplay.style.display = jumpLinksDisplay.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text, button) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const originalText = button.textContent;
+                    button.textContent = '已复制！';
+                    button.style.background = '#10b981';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = '#3b82f6';
+                    }, 2000);
+                }).catch(() => {
+                    showStatus('复制失败，请手动复制', 'error');
+                });
+            } else {
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    const originalText = button.textContent;
+                    button.textContent = '已复制！';
+                    button.style.background = '#10b981';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.background = '#3b82f6';
+                    }, 2000);
+                } catch (err) {
+                    showStatus('复制失败，请手动复制', 'error');
+                }
+                document.body.removeChild(textArea);
+            }
+        }
+
         // 页面加载完成后的初始化
         document.addEventListener('DOMContentLoaded', function() {
             console.log('企业微信好友添加页面已加载');
             console.log('目标用户信息:', userInfo);
+            
+            // 显示当前用户信息
+            updateUserInfoDisplay();
+            
+            // 如果有URL参数，显示提示
+            if (urlParams.phone || urlParams.userId || urlParams.corpId) {
+                showStatus('已从URL参数加载用户信息', 'info');
+            }
         });
     </script>
 </body>
